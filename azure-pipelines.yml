@@ -1,0 +1,128 @@
+trigger:
+  - main  # Trigger pipeline on changes to the main branch
+
+pool:
+  name: 'self-hosted'  # Specify the agent pool containing your self-hosted agent
+
+stages:
+  # Continuous Integration (CI)
+  - stage: BuildAndTest
+    displayName: 'Build and Test Node.js Application'
+    jobs:
+      - job: BuildAndTestJob
+        displayName: 'Build and Test Job'
+        steps:
+          # Step 1 Checkout code from GitHub
+          - checkout: self
+
+          # Step 2 Prepare SonarQube analysis
+          - task: SonarCloudPrepare@1
+            displayName: 'Prepare SonarCloud Analysis'
+            inputs:
+              SonarCloud: 'SonarCloudServiceConnection' # Replace with your service connection name
+              organization: 'devopsgroupassignment' # Replace with your SonarCloud organization key
+              scannerMode: 'CLI'
+              configMode: 'manual'
+              cliProjectKey: 'COMP308_GroupProject'
+              cliProjectName: 'COMP308_GroupProject'
+              cliProjectVersion: '1.0'
+
+          # Step 3 Install dependencies
+          - script: |
+              npm install
+            displayName: 'Install Dependencies'
+
+          # Step 4 Run Unit Tests (if tests are available)
+          - script: |
+              npx jest test/controller.test.js
+            displayName: 'Run Unit Tests'
+
+          # Step 5 Perform SonarQube Analysis
+          - task: SonarQubeAnalyze@5
+            displayName: 'Run SonarQube Analysis'
+
+          # Step 6 Publish Test Results
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            inputs:
+              testResultsFiles: 'test-results.xml'
+              testRunTitle: 'Node.js Unit Test Results'
+
+          # Step 7 Publish SonarQube Report
+          - task: SonarQubePublish@5
+            displayName: 'Publish SonarQube Quality Gate Result'
+            inputs:
+              pollingTimeoutSec: '300'
+
+  # Deliver Stage
+  - stage: Deliver
+    displayName: 'Deliver Artifacts'
+    dependsOn: BuildAndTest
+    jobs:
+      - job: DeliverJob
+        displayName: 'Deliver Build Artifacts'
+        steps:
+          - task: PublishBuildArtifacts@1
+            inputs:
+              pathToPublish: '$(Build.ArtifactStagingDirectory)'
+              artifactName: 'drop'
+              publishLocation: 'Container'
+
+  # Deploy to Development
+  - stage: DeployToDev
+    displayName: 'Deploy to Development Environment'
+    dependsOn: Deliver
+    jobs:
+      - job: DeployDevJob
+        displayName: 'Deploy to Development'
+        steps:
+          - script: |
+              echo Deploying to Development Environment...
+              npm install --production
+              echo Development Deployment Completed
+            displayName: 'Deploy Application to Dev'
+
+  # Deploy to QAT
+  - stage: DeployToQAT
+    displayName: 'Deploy to QAT Environment'
+    dependsOn: DeployToDev
+    condition: succeeded()
+    jobs:
+      - job: DeployQATJob
+        displayName: 'Deploy to QAT'
+        steps:
+          - script: |
+              echo Deploying to QAT Environment...
+              echo Running QAT-specific setup...
+              echo QAT Deployment Completed
+            displayName: 'Deploy Application to QAT'
+
+  # Deploy to Staging
+  - stage: DeployToStaging
+    displayName: 'Deploy to Staging Environment'
+    dependsOn: DeployToQAT
+    condition: succeeded()
+    jobs:
+      - job: DeployStagingJob
+        displayName: 'Deploy to Staging'
+        steps:
+          - script: |
+              echo Deploying to Staging Environment...
+              echo Running Staging-specific setup...
+              echo Staging Deployment Completed
+            displayName: 'Deploy Application to Staging'
+
+  # Deploy to Production
+  - stage: DeployToProduction
+    displayName: 'Deploy to Production Environment'
+    dependsOn: DeployToStaging
+    condition: succeeded()
+    jobs:
+      - job: DeployProdJob
+        displayName: 'Deploy to Production'
+        steps:
+          - script: |
+              echo Deploying to Production Environment...
+              echo Running Production-specific setup...
+              echo Production Deployment Completed
+            displayName: 'Deploy Application to Production'
