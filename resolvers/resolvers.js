@@ -8,10 +8,38 @@ const EmergencyAlert = require("../models/EmergencyAlert");
 module.exports = {
     // User Registration
     registerUser: async ({ input }) => {
-        const hashedPassword = await bcrypt.hash(input.password, 12);
-        const user = new User({ ...input, password: hashedPassword });
-        return await user.save();
-    },
+        try {
+            // Check if the user already exists by email (assuming email is unique)
+            const existingUser = await User.findOne({ email: input.email });
+            if (existingUser) {
+                throw new Error('User with this email already exists');
+            }
+    
+            // Hash the user's password using bcrypt (12 salt rounds)
+            const hashedPassword = await bcrypt.hash(input.password, 12);
+    
+            // Create a new user with the input data and the hashed password
+            const user = new User({
+                ...input, // Spread the input data (e.g., username, email, etc.)
+                password: hashedPassword // Replace the plain-text password with the hashed password
+            });
+    
+            // Save the new user to the database
+            const savedUser = await user.save();
+    
+            // Return the saved user data (you can omit sensitive fields like password)
+            return {
+                id: savedUser._id,
+                email: savedUser.email,
+                username: savedUser.username,
+                createdAt: savedUser.createdAt
+            };
+        } catch (error) {
+            // Handle any errors (e.g., hashing failure, DB issues, user already exists)
+            throw new Error('User registration failed: ' + error.message);
+        }
+    }
+    
 
     // User Login
     login: async ({ email, password }) => {
