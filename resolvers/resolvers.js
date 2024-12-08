@@ -73,7 +73,7 @@ module.exports = {
         return await newTip.save();
     },
 
-    // Patient: Send Emergency Alert
+    // Patient: Send //Emergency Alert
     sendEmergencyAlert: async ({ alertMessage }, req) => {
         if (!req.user || req.user.role !== "patient") {
             throw new Error("Unauthorized: Only patients can send emergency alerts.");
