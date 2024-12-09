@@ -84,13 +84,40 @@ module.exports = {
     },
 
     // Nurse: Get Vital Signs for a Patient
-    getVitalSigns: async ({ patientId }, req) => {
+getVitalSigns: async ({ patientId }, req) => {
+    try {
+        // Authorization Check: Ensure user is logged in and has the role of 'nurse'
         if (!req.user || req.user.role !== "nurse") {
             throw new Error("Unauthorized: Only nurses can view vital signs.");
         }
 
-        return await VitalSign.find({ patientId });
-    },
+        // Validate Input: Check if patientId is provided
+        if (!patientId) {
+            throw new Error("Invalid Request: Patient ID is required.");
+        }
+
+        // Check if patient exists in the database
+        const patientExists = await Patient.findById(patientId);
+        if (!patientExists) {
+            throw new Error(`Patient with ID ${patientId} not found.`);
+        }
+
+        // Fetch Vital Signs from the database
+        const vitalSigns = await VitalSign.find({ patientId });
+
+        // Log the action for audit purposes (optional)
+        console.log(`Nurse ${req.user.name} accessed vital signs for Patient ID ${patientId}.`);
+
+        // Return the fetched vital signs
+        return vitalSigns;
+
+    } catch (error) {
+        // Handle and log errors
+        console.error(`Error fetching vital signs: ${error.message}`);
+        throw new Error("An error occurred while retrieving vital signs. Please try again.");
+    }
+},
+
 
     // Nurse: Get Motivational Tips
     getMotivationalTips: async (args, req) => {
