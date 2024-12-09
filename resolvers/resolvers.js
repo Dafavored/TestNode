@@ -53,15 +53,48 @@ module.exports = {
         return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
     },
 
-    // Nurse: Add Vital Signs
-    addVitalSign: async ({ input }, req) => {
-        if (!req.user || req.user.role !== "nurse") {
+ // Nurse: Add Vital Signs
+addVitalSign: async ({ input }, req) => {
+    try {
+        // Check if the user is authenticated
+        if (!req.user) {
+            throw new Error("Unauthorized: Please log in.");
+        }
+
+        // Ensure only nurses can add vital signs
+        if (req.user.role !== "nurse") {
             throw new Error("Unauthorized: Only nurses can add vital signs.");
         }
 
+        // Validate required fields in the input
+        const requiredFields = ["patientId", "temperature", "bloodPressure", "heartRate", "respiratoryRate"];
+        for (const field of requiredFields) {
+            if (!input[field]) {
+                throw new Error(`Validation Error: '${field}' is required.`);
+            }
+        }
+
+        // Ensure values are within a valid range (example: basic validation)
+        if (input.temperature < 35 || input.temperature > 42) {
+            throw new Error("Validation Error: Temperature should be between 35°C and 42°C.");
+        }
+
+        // Create and save the vital sign record
         const vitalSign = new VitalSign(input);
-        return await vitalSign.save();
-    },
+        const savedVitalSign = await vitalSign.save();
+
+        // Return the saved vital sign details
+        return {
+            message: "Vital sign added successfully.",
+            vitalSign: savedVitalSign,
+        };
+    } catch (error) {
+        // Log the error for debugging and return a user-friendly message
+        console.error("Error adding vital sign:", error);
+        throw new Error(error.message || "An error occurred while adding vital signs.");
+    }
+},
+
 
     // Nurse: Add Motivational Tip
     addMotivationalTip: async ({ tip }, req) => {
