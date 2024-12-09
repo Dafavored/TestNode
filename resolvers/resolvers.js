@@ -56,12 +56,12 @@ module.exports = {
  // Nurse: Add Vital Signs
 addVitalSign: async ({ input }, req) => {
     try {
-        // Check if the user is authenticated
+        // Check if the user is authenticated.
         if (!req.user) {
             throw new Error("Unauthorized: Please log in.");
         }
 
-        // Ensure only nurses can add vital signs
+        // Ensure only nurses can add vital signs.
         if (req.user.role !== "nurse") {
             throw new Error("Unauthorized: Only nurses can add vital signs.");
         }
@@ -74,22 +74,22 @@ addVitalSign: async ({ input }, req) => {
             }
         }
 
-        // Ensure values are within a valid range (example: basic validation)
+        // Ensure values are within a valid range (example: basic validation).
         if (input.temperature < 35 || input.temperature > 42) {
             throw new Error("Validation Error: Temperature should be between 35°C and 42°C.");
         }
 
-        // Create and save the vital sign record
+        // Create and save the vital sign record.
         const vitalSign = new VitalSign(input);
         const savedVitalSign = await vitalSign.save();
 
-        // Return the saved vital sign details
+        // Return the saved vital sign details.
         return {
             message: "Vital sign added successfully.",
             vitalSign: savedVitalSign,
         };
     } catch (error) {
-        // Log the error for debugging and return a user-friendly message
+        // Log the error for debugging and return a user-friendly message.
         console.error("Error adding vital sign:", error);
         throw new Error(error.message || "An error occurred while adding vital signs.");
     }
